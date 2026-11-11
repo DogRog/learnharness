@@ -24,7 +24,7 @@
  *     would shadow every settings-page key change until restart.
  */
 
-const { app, BrowserWindow, Menu, ipcMain, nativeTheme, session, shell, dialog } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, nativeTheme, session, shell, dialog, powerSaveBlocker } = require("electron");
 const { pickAttachmentPath } = require("./attachment-picker.cjs");
 const { createChatGPT, fileStore } = require("./chatgpt.cjs");
 const { attachChatGPTChild, trustedSender, chatGPTControl } = require("./chatgpt-ipc.cjs");
@@ -32,6 +32,7 @@ const { createSubscriptions, loadSubscriptionSDK } = require("./subscriptions.cj
 const { attachSubscriptionChild, subscriptionControl } = require("./subscription-ipc.cjs");
 const { desktopAPIHeaders } = require("./desktop-api.cjs");
 const { openWebSubscriptionBrowser } = require("./web-subscription-browser.cjs");
+const { pinnedRemotePort, watchKeepAwake } = require("./remote-access.cjs");
 const { randomBytes } = require("node:crypto");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
@@ -211,6 +212,10 @@ function log(line) {
 	}
 }
 
+/** iPad access (electron/remote-access.cjs): the pinned port, when used. */
+let remoteAccessPort = null;
+let stopKeepAwake = null;
+
 function startServer(port) {
 	return new Promise((resolve, reject) => {
 		const child = spawn(
@@ -235,6 +240,7 @@ function startServer(port) {
 					LH_AUTH_FILE: AUTH_FILE(),
 					LH_DESKTOP_SERVER: "1",
 					LH_DESKTOP_API_SECRET: desktopAPISecret,
+					...(remoteAccessPort ? { LH_REMOTE_ACCESS_PORT: String(remoteAccessPort) } : {}),
 				},
 				stdio: ["ignore", "pipe", "pipe", "ipc"],
 			},
@@ -541,6 +547,15 @@ function setupAutoUpdater() {
 		reportUpdateStatus("disabled");
 		return;
 	}
+	// Local fork builds (npm run desktop:dist:local) must not replace
+	// themselves with an upstream release that lacks their changes.
+	try {
+		if (require("../package.json").lhLocalBuild === true) {
+			log("auto-update: local build — updater disabled");
+			reportUpdateStatus("disabled");
+			return;
+		}
+	} catch { /* no package.json beside the shell: keep the normal path */ }
 	try {
 		autoUpdater = require("electron-updater").autoUpdater;
 	} catch (err) {
@@ -690,7 +705,9 @@ async function main() {
 	// spawn, no packaging, full HMR. The rest of this shell still applies
 	// (guards, menu, single instance).
 	const devUrl = process.env.LH_DEV_URL;
-	const url = devUrl ?? `http://127.0.0.1:${await freePort()}`;
+	// iPad access pins the loopback port so its HTTPS proxy target is stable.
+	const remotePort = devUrl ? null : await pinnedRemotePort(DATA_DIR(), log);
+	const url = devUrl ?? `http://127.0.0.1:${remotePort ?? await freePort()}`;
 	if (!devUrl) {
 		desktopAPISecret = randomBytes(32).toString("hex");
 		const ownedOrigin = new URL(url).origin;
@@ -718,6 +735,9 @@ async function main() {
 		await subscriptions.ready;
 		log(`starting server: ${serverEntry()}`);
 		log(`data dir: ${DATA_DIR()}${fs.existsSync(AUTH_FILE()) ? " · auth.json: present" : " · auth.json: ABSENT (no BYOK keys yet)"}`);
+		remoteAccessPort = remotePort;
+		stopKeepAwake = watchKeepAwake(DATA_DIR(), powerSaveBlocker, log);
+		app.once("will-quit", () => stopKeepAwake?.());
 		await startServer(new URL(url).port);
 		await waitUntilUp(url);
 		log(`server up: ${url}`);

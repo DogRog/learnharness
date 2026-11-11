@@ -39,8 +39,10 @@ it("Proxy retains API roots, siblings, endpoint lookalikes and all other API rou
 		"/api/plugins/document-one/other/documents/markdown", "/api/plugins/documents/markdown",
 		"/api/graph/import", "/api/events", "/api/chat", "/api/settings/models", "/api/chats/scratch/markdown",
 	]) assert.equal(proxyMatches(path), true, path);
+	// Non-API paths are matched as pages for iPad access (proxy.ts remotePage);
+	// the Mac window's own page loads pass through it untouched.
 	for (const path of ["/", "/chat/new", "/apix", "/api-other/plugins/document-one/documents/markdown"]) {
-		assert.equal(proxyMatches(path), false, path);
+		assert.equal(proxyMatches(path), true, path);
 	}
 });
 

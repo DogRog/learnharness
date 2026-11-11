@@ -19,6 +19,10 @@ const prose = Source_Sans_3({ subsets: ["latin"], variable: "--font-sans3" });
 export const metadata: Metadata = {
 	title: "Learning Harness",
 	description: "A teacher agent with a memory — sessions, quizzes, and a knowledge graph of what you know.",
+	// iPad access: Home Screen install opens full screen with the app icon.
+	manifest: "/manifest.webmanifest",
+	icons: { apple: "/apple-icon.png" },
+	appleWebApp: { capable: true, title: "LearnHarness", statusBarStyle: "default" },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
