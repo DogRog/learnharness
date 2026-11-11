@@ -62,6 +62,7 @@ export { pluginProblemAvailabilityOf, type ProblemTypeResolver } from "./plugin-
 export { pluginQuestionAvailabilityOf, reconcilePluginQuestionCompatibility, preparePluginQuestionDismissal, type QuestionTypeResolver } from "./plugin-questions.ts";
 export { claudeCodeInstallationResponse } from "./claude-code.ts";
 export { remoteAccessGet, remoteAccessPut, remotePairingPost, remotePairingDelete, remoteDeviceDelete, remotePairPost, needsPairing } from "./remote-access-http.ts";
+export { uploadPost, saveUpload, uploadFileName, MAX_UPLOAD_BYTES } from "./uploads.ts";
 export { pairPageResponse } from "./pair-page.ts";
 // The custom endpoint module (registers into piModels() + probes for models).
 // No import side effects; the boot sync lives in stores.ts.
