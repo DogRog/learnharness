@@ -206,9 +206,11 @@ export function isTypingSurface(e: KeyboardEvent): boolean {
 	return target.isContentEditable;
 }
 
-/** macOS styling for binding display ("⌘D", "⇧⇥", "⌥↑"). */
+/** Apple styling for binding display ("⌘D", "⇧⇥", "⌥↑"). iPadOS Safari
+ *  reports "MacIntel" in desktop mode but "iPad" in mobile mode (narrow
+ *  Split View / Slide Over); its hardware keyboards carry ⌘ either way. */
 export const IS_MAC =
-	typeof navigator !== "undefined" && /mac/i.test(navigator.platform || navigator.userAgent);
+	typeof navigator !== "undefined" && /mac|ipad|iphone|ipod/i.test(navigator.platform || navigator.userAgent);
 
 const MOD_GLYPH = IS_MAC ? "⌘" : "Ctrl+";
 const ALT_GLYPH = IS_MAC ? "⌥" : "Alt+";

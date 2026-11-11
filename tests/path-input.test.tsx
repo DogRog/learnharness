@@ -542,6 +542,30 @@ test("single-line mode never adds a trailing newline caret placeholder", async (
 	assert.equal(f.root.querySelector(`[${PATH_CARET_ATTRIBUTE}]`), null);
 });
 
+test("iPad access: a pasted photo is uploaded to the Mac and attached as a path chip", async () => {
+	const f = await fixture("see ");
+	const doc = f.root.ownerDocument;
+	Object.defineProperty(doc, "cookie", { configurable: true, value: "__Host-lh_remote=1" });
+	const previousFetch = globalThis.fetch;
+	const previousEvent = globalThis.CustomEvent;
+	globalThis.CustomEvent = (doc.defaultView as unknown as typeof globalThis).CustomEvent;
+	globalThis.fetch = (async (_url: string, init: RequestInit) => {
+		const file = (init.body as FormData).get("file") as File;
+		return Response.json({ path: `/Users/me/data/uploads/2026-11-11/${file.name}` });
+	}) as typeof fetch;
+	try {
+		f.select(4);
+		const photo = new File(["png"], "image.png", { type: "image/png" });
+		const paste = await f.event("paste", { clipboardData: { types: ["Files"], files: [photo], getData: () => "" } });
+		assert.equal(paste.defaultPrevented, true);
+		await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+		assert.equal(f.value, "see `/Users/me/data/uploads/2026-11-11/image.png`");
+	} finally {
+		globalThis.fetch = previousFetch;
+		globalThis.CustomEvent = previousEvent;
+	}
+});
+
 test("paste during IME stays plaintext and is deferred until composition finishes", async () => {
 	const f = await fixture("");
 	f.select(0);

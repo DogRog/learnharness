@@ -1,0 +1,275 @@
+/*
+ * TOUCH LAYOUT (iPad access, phase 4). Everything in this file is gated on
+ * a touch primary pointer — `(pointer: coarse)` / `(hover: none)` — so the
+ * Mac window (mouse or trackpad) never matches a single rule here. iPadOS
+ * Safari reports a coarse primary pointer even with a Magic Keyboard
+ * trackpad attached, so the iPad always gets this layout.
+ *
+ * Plain CSS on purpose (no @apply, no Tailwind import): unlayered author
+ * rules beat Tailwind's utility LAYER regardless of specificity or order,
+ * so these rules override component classes without !important and
+ * without editing the components. Selectors are element types, roles and
+ * data-testid hooks, which survive upstream class reshuffles.
+ *
+ * Companion script: components/touch-support.tsx (on-screen keyboard
+ * tracking, long-press context menus, narrow-width sidebar).
+ */
+
+/* ── 0. Safe areas + on-screen keyboard ─────────────────────────────────
+   The app is a fixed-height shell (`h-dvh` roots, inner scrollers). As a
+   Home Screen app it runs edge to edge (viewport-fit=cover), so the shell
+   is inset by the safe areas. While the on-screen keyboard is up,
+   touch-support.tsx publishes the visible height/offset and the shell
+   shrinks to it: the composer sits on top of the keyboard instead of
+   under it, and the top bar stays on screen. */
+@media (pointer: coarse) {
+	:root {
+		--lh-safe-top: env(safe-area-inset-top, 0px);
+		--lh-safe-right: env(safe-area-inset-right, 0px);
+		--lh-safe-bottom: env(safe-area-inset-bottom, 0px);
+		--lh-safe-left: env(safe-area-inset-left, 0px);
+		--lh-app-height: calc(100dvh - var(--lh-safe-top) - var(--lh-safe-bottom));
+	}
+	:root[data-lh-keyboard] {
+		/* The keyboard covers the bottom inset (home indicator). */
+		--lh-safe-bottom: 0px;
+		--lh-app-height: calc(var(--lh-keyboard-viewport-height, 100dvh) - var(--lh-safe-top));
+	}
+	.h-dvh {
+		height: var(--lh-app-height);
+	}
+	body > .h-dvh {
+		box-sizing: content-box;
+		padding: var(--lh-safe-top) var(--lh-safe-right) var(--lh-safe-bottom) var(--lh-safe-left);
+	}
+	:root[data-lh-keyboard] body > .h-dvh {
+		/* Follow the visible area wherever Safari panned the page. */
+		position: relative;
+		top: var(--lh-keyboard-viewport-top, 0px);
+	}
+	:root[data-lh-keyboard] body {
+		min-height: 0;
+	}
+}
+
+/* ── 1. iOS annoyances ──────────────────────────────────────────────────── */
+@media (pointer: coarse) {
+	html {
+		/* No grey flash on tap; controls carry their own pressed states. */
+		-webkit-tap-highlight-color: transparent;
+		/* Safari must not inflate text in landscape. */
+		-webkit-text-size-adjust: 100%;
+		text-size-adjust: 100%;
+	}
+	/* Controls: no double-tap zoom, no long-press callout, no accidental
+	   text selection of a label. Reading text stays selectable (the
+	   selection toolbar depends on it). */
+	:where(button, [role="button"], [role="menuitem"], [role="switch"], [role="radio"], [role="tab"], summary, label, select, a[href]) {
+		touch-action: manipulation;
+	}
+	:where(button, [role="button"], [role="menuitem"], [role="switch"], [role="radio"], [role="tab"], summary) {
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		user-select: none;
+	}
+	/* Safari zooms the page when a focused field's text is under 16px.
+	   Fields that already set a size of 16px or more (the type ladder's
+	   text-lg and up, the reading size) are left alone: this rule would
+	   otherwise replace a 32px title field with 16px. */
+	:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"]), textarea, select, [contenteditable]:not([contenteditable="false"])):not(.text-lg, .text-xl, .text-2xl, .text-3xl, [class*="--lh-prose-size"], .lh-input, .lh-prose) {
+		font-size: max(16px, 1em);
+	}
+	/* The reading size is a setting; a field never goes below 16px. */
+	.lh-input {
+		font-size: max(16px, var(--lh-prose-size));
+	}
+}
+
+/* ── 2. Tap targets: 44 × 44 CSS px ─────────────────────────────────────
+   Growth by min-size, not redesign: a control keeps its look and gains
+   room. Inline text links and native checkboxes/radios/sliders are left
+   alone (their rows or labels are the target). */
+@media (pointer: coarse) {
+	:where(button, [role="button"], [role="menuitem"], [role="tab"], [role="radio"], summary, select,
+		input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"]),
+		textarea, [contenteditable]:not([contenteditable="false"])) {
+		min-height: 44px;
+	}
+	:where(button, [role="button"], [role="tab"], [role="radio"]) {
+		min-width: 44px;
+	}
+	/* Citation chips sit inside a line of text (the composer's editor, a
+	   sent message): growing them would break the line, and a hit pad
+	   would steal caret taps on the lines around them. */
+	[data-testid="citation-chip"] button {
+		min-height: 0;
+		min-width: 0;
+	}
+	/* Block-level links (icon links, row links); inline prose links stay inline. */
+	a:where(.flex, .inline-flex, .block, .inline-block, .grid) {
+		min-height: 44px;
+		min-width: 44px;
+	}
+}
+
+/* Controls that must keep their drawn size (a switch, a ring glyph, a
+   native checkbox): the box stays, an invisible pad grows the hit area to
+   44 × 44. The pad is zero wherever the box is already big enough.
+   (WebKit and Blink render ::after on checkbox/radio inputs.) */
+@media (pointer: coarse) {
+	:where([role="switch"], [data-testid="coverage-ring"], input[type="checkbox"], input[type="radio"]) {
+		position: relative;
+		min-width: 0;
+		min-height: 0;
+	}
+	:where([role="switch"], [data-testid="coverage-ring"], input[type="checkbox"], input[type="radio"])::after {
+		content: "";
+		position: absolute;
+		top: min(0px, calc((100% - 44px) / 2));
+		bottom: min(0px, calc((100% - 44px) / 2));
+		left: min(0px, calc((100% - 44px) / 2));
+		right: min(0px, calc((100% - 44px) / 2));
+	}
+	/* Tree guides (components/tree-presentation.tsx) are placed for a 14px
+	   disclosure chevron; the chevron's box is 44px here, so its glyph sits
+	   15px further right and lower. Cosmetic only: if the guide's classes
+	   change upstream this rule just stops matching. */
+	:where(.pointer-events-none.absolute.w-px.bg-border\/50) {
+		translate: 15px 0;
+		top: 40px;
+	}
+}
+
+/* ── 3. Hover-only UI ───────────────────────────────────────────────────
+   Tailwind's hover: variants only apply on hover-capable devices, so
+   anything revealed by group-hover is permanently invisible on touch. */
+@media (hover: none) {
+	/* Copy / expand corners on code blocks, tables and diagrams. */
+	:where([data-testid="md-copy"], [data-testid="md-mermaid-expand"]) {
+		opacity: 1;
+	}
+}
+/* Tooltips open on hover or keyboard focus. With no hover-capable pointer
+   at all (finger or Pencil only) the only way one opens is focus moving
+   back to a control after a dialog closes, where it would sit until the
+   next tap. With a trackpad attached (any-hover: hover) they work as on
+   the Mac. */
+@media (pointer: coarse) and (any-hover: none) {
+	[data-slot="tooltip-content"] {
+		display: none;
+	}
+}
+
+/* ── 4. The floating side-question window ───────────────────────────────
+   It already drags and resizes with pointer events (finger, Pencil,
+   trackpad alike) on touch-action: none handles; the 8–12px resize strips
+   are just too thin for a finger. They grow outward and inward around
+   the same edges; the corners stay on top of the edges. */
+@media (pointer: coarse) {
+	[data-testid="side-thread-popover"] {
+		/* The outward half of each handle must stay hittable. */
+		overflow: visible;
+	}
+	[data-side-resize] {
+		touch-action: none;
+	}
+	[data-side-resize="n"] { top: -12px; height: 24px; }
+	[data-side-resize="s"] { bottom: -12px; height: 24px; }
+	[data-side-resize="w"] { left: -12px; width: 24px; }
+	[data-side-resize="e"] { right: -12px; width: 24px; }
+	[data-side-resize="n"], [data-side-resize="s"] { left: 20px; right: 20px; }
+	[data-side-resize="w"], [data-side-resize="e"] { top: 20px; bottom: 20px; }
+	[data-side-resize="nw"], [data-side-resize="ne"], [data-side-resize="sw"], [data-side-resize="se"] {
+		/* 12px outside + 20px inside: clear of the header and send buttons. */
+		width: 32px;
+		height: 32px;
+		z-index: 1;
+	}
+	[data-side-resize="nw"] { left: -12px; top: -12px; }
+	[data-side-resize="ne"] { right: -12px; top: -12px; }
+	[data-side-resize="sw"] { left: -12px; bottom: -12px; }
+	[data-side-resize="se"] { right: -12px; bottom: -12px; }
+	/* The drag header: the whole strip is the grip. */
+	[data-testid="side-thread-header"] {
+		min-height: 44px;
+		touch-action: none;
+	}
+	/* The dictation button sits inside the input's corner. */
+	[data-testid="side-composer-surface"] > div:has(> [data-testid="side-dictation-toggle"]) {
+		height: auto;
+		top: 0;
+		bottom: 0;
+		right: 0;
+	}
+}
+
+/* ── 5. On-screen keyboard: dialogs ─────────────────────────────────────
+   A modal layer (host-dialog.tsx) and the backdrop inside it are fixed to
+   the layout viewport (the layer by inline style, hence !important). With
+   the keyboard up both cover the visible rectangle instead, so the frame
+   centers above the keyboard and is never taller than what is visible. */
+@media (pointer: coarse) {
+	:root[data-lh-keyboard] body > [data-interaction-layer] {
+		position: absolute !important;
+		top: var(--lh-keyboard-viewport-top, 0px) !important;
+		bottom: auto !important;
+		height: var(--lh-keyboard-viewport-height, 100dvh);
+	}
+	:root[data-lh-keyboard] body > [data-interaction-layer] > div > .fixed.inset-0 {
+		position: absolute;
+	}
+	:root[data-lh-keyboard] body > [data-interaction-layer] > div > .fixed.inset-0 > * {
+		max-height: calc(var(--lh-keyboard-viewport-height, 100dvh) - 16px);
+	}
+}
+
+/* ── 6. Narrow windows (Split View, Slide Over) ─────────────────────────
+   Below the desktop shell's own auto-close width (928px: 640 page + 288
+   sidebar) the inline sidebar would crush the page, so it overlays it;
+   touch-support.tsx closes it after a navigation or a tap outside. */
+@media (pointer: coarse) and (max-width: 927px) {
+	body > .h-dvh > aside {
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		z-index: 40;
+		padding: var(--lh-safe-top) 0 var(--lh-safe-bottom) var(--lh-safe-left);
+		background: var(--background);
+	}
+	body > .h-dvh > aside[aria-hidden="false"] {
+		/* The scrim: a shadow needs no extra element. */
+		box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.45);
+	}
+}
+@media (pointer: coarse) and (max-width: 767px) {
+	/* The docked side conversation (22rem) would leave the lesson a sliver:
+	   it lies over the lesson instead, below the top bar. */
+	[data-testid="side-thread-panel"] {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		right: 0;
+		z-index: 30;
+		width: min(22rem, 100%);
+		box-shadow: -8px 0 24px rgb(0 0 0 / 0.35);
+	}
+	/* Home's floating controls: the row wraps under the sidebar toggle's
+	   reserved corner instead of sliding over it. */
+	.lh-wco-floating > .flex {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+	/* Settings: the fixed 192px section list would leave the content half
+	   of a 456px dialog; both columns give a little. */
+	[data-testid="settings-dialog"] {
+		max-width: calc(100vw - 16px);
+	}
+	[data-testid="settings-nav"] {
+		width: 9.5rem;
+	}
+	/* A settings row's control drops under its label when both no longer fit. */
+	[data-testid="settings-content"] :where(.flex.items-center.justify-between.gap-4) {
+		flex-wrap: wrap;
+	}
+}

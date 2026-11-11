@@ -47,6 +47,29 @@ On the iPad, the paperclip opens the iPad's own picker: Photo Library, Take Phot
 - Files are never overwritten: a second `image.jpg` the same day becomes `image (2).jpg`.
 - Uploads stay on the Mac until you delete them. If you restrict **File access** (Settings → Agent → Tools), add the `uploads` folder inside the data folder to the allowed list, or the agent can't open them.
 
+## Sketch with Apple Pencil
+
+Turn on **Sketchpad** once in **Settings → Core plugins** (on the Mac or the iPad). In a lesson or practice session, open **⋯ → Sketch**. Details are in the [Sketchpad README](../plugins/sketchpad/README.md).
+
+- Apple Pencil draws, with pressure. Fingers never draw: one finger moves the sheet, two fingers pinch to zoom.
+- Pen, highlighter, eraser (the Pencil's eraser works too), five colors, three widths, undo and redo, zoom to fit, and full screen.
+- **Background** puts a photo, scan or a picture from the lesson behind your ink, so you can mark it up.
+- Your sketch is attached to your next message, like Drawing Pad's ink. The menu says **Sketch (unsent)** while it holds unsent ink.
+- **Σ Convert to LaTeX** reads your handwriting with the model set as **Vision** (Settings → Agent) and shows the result for you to fix. Copy it into your message. Sending the sketch as an image works without this.
+- Drawing Pad still draws over the current question. Sketchpad is the free whiteboard.
+
+## Touch, Pencil and keyboard
+
+On a touch screen the same pages adapt; the Mac window is unchanged.
+
+- Controls are at least 44 points tall and wide, and text fields use 16-point text so Safari doesn't zoom in when you tap one.
+- Press and hold where you would right-click on the Mac: a session in the sidebar (Rename, Export, Delete) or a node in the graph.
+- Select text in a lesson the usual way (press and hold, then drag the handles). **Cite** and **Ask** appear next to the selection.
+- The side-question window drags by its title strip and resizes from any edge or corner, with a finger or Apple Pencil.
+- With the on-screen keyboard open, the page shrinks to the space above it, so the message field stays in view.
+- In Split View or Slide Over, below 928 points wide, the sidebar opens over the page and closes when you pick a session or tap outside it. It returns to its usual place when the window is wide again.
+- With a Magic Keyboard, the [keyboard shortcuts](keyboard.md) use ⌘, as on the Mac.
+
 ## Security model
 
 - A paired device has the same access as the Mac window: sessions, graph, settings, provider keys and file tools. Pair only your own devices.
@@ -62,7 +85,9 @@ On the iPad, the paperclip opens the iPad's own picker: Photo Library, Take Phot
 ## Limits today
 
 - ChatGPT and Copilot sign-in happen in the Mac window. Once signed in, those models also work from the iPad.
-- The layout is still the desktop layout. Touch and Pencil improvements are planned.
+- Sketchpad cannot use a PDF page as the background yet; use a screenshot or photo of the page.
+- Convert to LaTeX copies the text; it can't type into the message box for you.
+- A diagram opened full screen pans with a finger and zooms with its zoom buttons. Pinching does not zoom it.
 - Revoking a device or turning access off stops new requests at once, but a live update stream already open on that device continues until it reconnects.
 
 ## Build the app

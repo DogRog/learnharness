@@ -3,6 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { FilePathChip } from "./file-path-chip";
+import { uploadFiles, uploadsAvailable } from "./upload-files";
 import { CitationChip } from "./citation-chip";
 import { cn } from "../lib/utils";
 import {
@@ -218,7 +219,14 @@ export const PathInput = React.forwardRef<HTMLDivElement, PathInputProps>(functi
 			event.preventDefault();
 			const text = event.clipboardData?.getData("text/plain") ?? "";
 			// Image/file/HTML-only clipboard contents are not text replacement.
-			if (text === "") return;
+			if (text === "") {
+				// iPad access: a pasted photo or file is uploaded to the Mac and attached.
+				const files = Array.from(event.clipboardData?.files ?? []);
+				if (files.length > 0 && uploadsAvailable()) void uploadFiles(files).then(({ paths }) => {
+					if (mounted && paths.length > 0) root.dispatchEvent(new CustomEvent(INSERT_FILE_PATHS_EVENT, { detail: paths }));
+				});
+				return;
+			}
 			if (composing.current) pendingPaste.push(text);
 			else replace(text);
 		}
