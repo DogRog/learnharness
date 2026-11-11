@@ -10,6 +10,7 @@ import { BROWSER_NOTICE } from "@/components/file-path-drop-zone";
 import { InteractionLayerOwner, useInteractionLayer, useInteractionLayers, useOptionalInteractionLayers } from "./interaction-layers";
 import { INTERACTION_LAYER_Z_BASE } from "./host-dialog";
 import { isInteractionScopeEligible } from "./plugin-input-focus";
+import { UPLOAD_ACCEPT, uploadFiles, uploadsAvailable } from "./upload-files";
 
 /** Picked files → the rooted paths an editor chips (issue #285), via the
  *  desktop bridge. Same validity rule as drops: a file without a usable
@@ -48,6 +49,10 @@ const noSubscribe = () => () => {};
 function useDesktopPaths(): boolean {
 	return useSyncExternalStore(noSubscribe, () => Boolean(window.lh?.getPathForFile), () => false);
 }
+/** iPad access: no paths there, so picked files are uploaded to the Mac. */
+function useUploads(): boolean {
+	return useSyncExternalStore(noSubscribe, uploadsAvailable, () => false);
+}
 
 /** The choice menu owns Escape with the same layer law as MenuShell, while
  * retaining its paperclip/composer-specific geometry. Mount separately so a
@@ -85,6 +90,8 @@ export function AttachFilesButton({ editorRef }: { editorRef: React.RefObject<HT
 	const controller = useOptionalInteractionLayers();
 	const pickerRef = useRef<HTMLInputElement>(null);
 	const desktop = useDesktopPaths();
+	const uploads = useUploads() && !desktop;
+	const uploading = useRef(false);
 	const buttonRef = useRef<HTMLButtonElement>(null);
 	const popupRef = useRef<HTMLDivElement>(null);
 	const choosingFolder = useRef(false);
@@ -149,23 +156,40 @@ export function AttachFilesButton({ editorRef }: { editorRef: React.RefObject<HT
 				multiple
 				hidden
 				data-testid="attach-files-input"
+				accept={uploads ? UPLOAD_ACCEPT : undefined}
 				onChange={(e) => {
 					const resolve = window.lh?.getPathForFile;
+					if (!resolve && uploads) {
+						const files = Array.from(e.currentTarget.files ?? []);
+						e.currentTarget.value = "";
+						if (files.length === 0 || uploading.current) return;
+						const editor = editorRef.current;
+						uploading.current = true;
+						setNotice(files.length === 1 ? "Uploading to your Mac…" : `Uploading ${files.length} files to your Mac…`);
+						void uploadFiles(files).then(({ paths, errors }) => {
+							if (paths.length > 0 && editor?.isConnected) editor.dispatchEvent(new CustomEvent(INSERT_FILE_PATHS_EVENT, { detail: paths }));
+							setNotice(errors.join(" "));
+						}).finally(() => { uploading.current = false; });
+						return;
+					}
 					const { paths } = resolve ? pathsForFiles(Array.from(e.currentTarget.files ?? []), resolve) : { paths: [] };
 					if (paths.length > 0) editorRef.current?.dispatchEvent(new CustomEvent(INSERT_FILE_PATHS_EVENT, { detail: paths }));
 					e.currentTarget.value = ""; // allow re-picking the same file
 				}}
 			/>
-			<Hint label={desktop ? "Attach files or a folder" : BROWSER_NOTICE}>
+			<Hint label={desktop ? "Attach files or a folder" : uploads ? "Attach photos or files" : BROWSER_NOTICE}>
 				<button
 					ref={buttonRef}
 					type="button"
 					aria-label="Attach files"
-					aria-disabled={!desktop}
-					aria-haspopup="menu"
+					aria-disabled={!desktop && !uploads}
+					aria-haspopup={uploads ? undefined : "menu"}
 					aria-expanded={open}
 					data-testid="attach-files"
-					onClick={() => { if (desktop) { setNotice(""); setOpen(!open); } }}
+					onClick={() => {
+						if (desktop) { setNotice(""); setOpen(!open); }
+						else if (uploads && !uploading.current) { setNotice(""); pickerRef.current?.click(); }
+					}}
 					className="flex size-10 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:hover:bg-transparent aria-disabled:hover:text-muted-foreground"
 				>
 					<PaperclipIcon className="size-4" />

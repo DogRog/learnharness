@@ -36,6 +36,7 @@ import {
 } from "@/src/core";
 import { SettingsGroup } from "./controls.tsx";
 import { SubscriptionConnections } from "./subscription-connections.tsx";
+import { useRemoteDevice } from "@/components/remote-device";
 import { ClaudeCodeInstallationStatus } from "./claude-code-status.tsx";
 import { ProviderMenuList } from "./model-menu.tsx";
 import { useInteractionLayer, useInteractionLayers, useOptionalInteractionLayers } from "@/components/interaction-layers";
@@ -371,6 +372,7 @@ export function KeysSection({
 	initialRow?: string;
 }) {
 	const [statuses, setStatuses] = useState<AuthKeyStatus[] | null>(null);
+	const remoteDevice = useRemoteDevice();
 	const [providers, setProviders] = useState<ProviderKeyInfo[] | undefined>(undefined);
 	const [loading, setLoading] = useState(true);
 	/** The unfolded row (its id), null = all folded. Seeded by the
@@ -573,7 +575,9 @@ export function KeysSection({
 			</SettingsGroup>
 
 			<SettingsGroup label="Subscriptions" testid="group-subscriptions">
-				<SubscriptionConnections />
+				{remoteDevice
+					? <p className="text-xs text-muted-foreground" data-testid="subscriptions-on-mac">Connect subscriptions in LearnHarness on your Mac.</p>
+					: <SubscriptionConnections />}
 			</SettingsGroup>
 
 			<SettingsGroup label="External CLI" testid="group-external-cli">
