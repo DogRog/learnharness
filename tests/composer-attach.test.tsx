@@ -20,8 +20,9 @@ import { InteractionLayersProvider, useInteractionLayers, type InteractionLayers
 let cleanup: (() => Promise<void>) | undefined;
 afterEach(async () => { await cleanup?.(); cleanup = undefined; });
 
-async function fixture({ desktop = true } = {}) {
+async function fixture({ desktop = true, remote = false } = {}) {
 	const { window: win, document: doc } = parseHTML("<html><body><div id='root'></div></body></html>");
+	if (remote) Object.defineProperty(doc, "cookie", { configurable: true, value: "theme=dark; __Host-lh_remote=1" });
 	let active: Element = doc.body;
 	Object.defineProperty(doc, "activeElement", { get: () => active });
 	const selection = {
@@ -285,6 +286,31 @@ describe("composer attach button", () => {
 		assert.equal(f.value, "readthis");
 		assert.equal(f.folderCalls, 0);
 		assert.equal(f.sends, 0);
+	});
+
+	it("iPad access: the paperclip opens the picker directly, uploads, and attaches the Mac paths at the caret", async () => {
+		const f = await fixture({ desktop: false, remote: true });
+		const previousFetch = globalThis.fetch;
+		const uploaded: string[] = [];
+		globalThis.fetch = (async (url: string, init: RequestInit) => {
+			assert.equal(url, "/api/uploads");
+			const file = (init.body as FormData).get("file") as File;
+			uploaded.push(file.name);
+			return Response.json({ path: `/Users/me/data/uploads/2026-11-11/${file.name}` });
+		}) as typeof fetch;
+		try {
+			assert.equal(f.button.getAttribute("aria-disabled"), "false");
+			assert.match(f.doc.querySelector('[data-testid="attach-files-input"]')!.getAttribute("accept") ?? "", /image\/\*/);
+			f.caret(4);
+			await act(async () => { f.button.click(); });
+			assert.equal(f.pickerClicks, 1, "no Files/Folder menu on the iPad");
+			assert.equal(f.doc.querySelectorAll('[role="menuitem"]').length, 0);
+			await f.pick([new File(["a"], "board.jpg"), new File(["b"], "week 3.pdf")]);
+			await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+			assert.deepEqual(uploaded, ["board.jpg", "week 3.pdf"]);
+			const paths = uploaded.map((name) => `/Users/me/data/uploads/2026-11-11/${name}`);
+			assert.equal(f.value, `read ${paths.map(quoteFilePath).join(" ")} this`);
+		} finally { globalThis.fetch = previousFetch; }
 	});
 
 	it("browser: the button stays inert and the picker never opens", async () => {

@@ -1,14 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Source_Sans_3 } from "next/font/google";
 import { connection } from "next/server";
 import "katex/dist/katex.min.css";
 import "./globals.css";
+import "./touch.css";
 import { AppShell, SidebarProvider } from "@/components/sidebar";
 import { ActivityProvider } from "@/components/activity-dock";
 import { ServerEventsProvider } from "@/components/server-events";
 import { AppearanceProvider } from "@/components/settings/appearance";
 import UpdateBanner from "@/components/update-banner";
 import { PluginsProvider } from "@/components/plugins";
+import { TouchSupport } from "@/components/touch-support";
 import { readThemeBoot } from "@/src/server";
 
 // Chrome = JetBrains Mono, teaching prose = Source Sans 3, titles = CMU
@@ -19,6 +21,20 @@ const prose = Source_Sans_3({ subsets: ["latin"], variable: "--font-sans3" });
 export const metadata: Metadata = {
 	title: "Learning Harness",
 	description: "A teacher agent with a memory — sessions, quizzes, and a knowledge graph of what you know.",
+	// iPad access: Home Screen install opens full screen with the app icon.
+	manifest: "/manifest.webmanifest",
+	icons: { apple: "/apple-icon.png" },
+	appleWebApp: { capable: true, title: "LearnHarness", statusBarStyle: "default" },
+};
+
+// iPad access: the Home Screen app runs edge to edge, so the page may read
+// the safe-area insets (app/touch.css); browsers that can shrink the page
+// for an on-screen keyboard do (Safari cannot — components/touch-support.tsx).
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
+	viewportFit: "cover",
+	interactiveWidget: "resizes-content",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +60,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 						<SidebarProvider>
 							<ActivityProvider>
 								<AppShell>{children}</AppShell>
+								{/* iPad access: touch-only behavior, inert on the Mac. */}
+								<TouchSupport />
 							</ActivityProvider>
 						</SidebarProvider>
 					</AppearanceProvider>

@@ -1,0 +1,13 @@
+const icon = (paths: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+export const SKETCH = icon('<path d="M3 17c3-6 5 4 8-2s4-8 6-4 1 6 4 5"/><path d="M3 21h18"/>');
+export const PEN = icon('<path d="m16 3 5 5M4 20l4-1L21 6a2.12 2.12 0 0 0-3-3L5 16z"/>');
+export const HIGHLIGHTER = icon('<path d="m9 11-3 3v3h3l3-3"/><path d="m9 11 8-8 4 4-8 8z"/><path d="M3 21h8"/>');
+export const ERASER = icon('<path d="m4 13 9-9a2 2 0 0 1 3 0l4 4a2 2 0 0 1 0 3l-9 9H7l-3-3a3 3 0 0 1 0-4Z"/><path d="m9 8 7 7M11 20h10"/>');
+export const UNDO = icon('<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>');
+export const REDO = icon('<path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>');
+export const CLEAR = icon('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/>');
+export const IMAGE = icon('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5L5 20"/>');
+export const FIT = icon('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><rect x="9" y="9" width="6" height="6" rx="1"/>');
+export const EXPAND = icon('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>');
+export const SHRINK = icon('<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/>');
+export const LATEX = icon('<path d="M18 5H7l6 7-6 7h11"/>');

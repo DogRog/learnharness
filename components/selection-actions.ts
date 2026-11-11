@@ -100,6 +100,16 @@ export function observeSelectionActions({ element, getActionElement, restoreAfte
 		gesture = false;
 		schedule(event.detail >= 2 ? MULTI_CLICK_SETTLE_MS : 0, { x: event.clientX, y: event.clientY });
 	};
+	// A finger or Pencil selects with a long press and the selection handles;
+	// Safari sends no mouseup for that, so the press ends when the pointer
+	// lifts or the system takes the gesture over. The long press has already
+	// made its selection by then and nothing else would report it; later
+	// handle drags report through selectionchange, as the keyboard does.
+	const touchEnd = (event: PointerEvent) => {
+		if (event.pointerType === "mouse" || !pointerDown) return;
+		pointerDown = false;
+		if (timer === undefined && frame === undefined) schedule(0, null);
+	};
 	const keyDown = (event: KeyboardEvent) => {
 		if (event.key === "Escape") { if (shown || timer !== undefined) dismiss("cancel"); return; }
 		pointerDown = false;
@@ -118,11 +128,13 @@ export function observeSelectionActions({ element, getActionElement, restoreAfte
 
 	document.addEventListener("pointerdown", pointerDownCapture, true);
 	document.addEventListener("mouseup", mouseUp, true);
+	document.addEventListener("pointerup", touchEnd, true);
 	document.addEventListener("keydown", keyDown, true);
 	document.addEventListener("focusin", focusIn, true);
 	element.addEventListener("contextmenu", contextMenu);
 	element.addEventListener("scroll", scroll, true);
 	view.addEventListener("pointercancel", cancel);
+	view.addEventListener("pointercancel", touchEnd); // after cancel: its report must survive
 	view.addEventListener("blur", cancel);
 	view.addEventListener("resize", cancel);
 
@@ -137,11 +149,13 @@ export function observeSelectionActions({ element, getActionElement, restoreAfte
 			if (scrollTimer !== undefined) view.clearTimeout(scrollTimer);
 			document.removeEventListener("pointerdown", pointerDownCapture, true);
 			document.removeEventListener("mouseup", mouseUp, true);
+			document.removeEventListener("pointerup", touchEnd, true);
 			document.removeEventListener("keydown", keyDown, true);
 			document.removeEventListener("focusin", focusIn, true);
 			element.removeEventListener("contextmenu", contextMenu);
 			element.removeEventListener("scroll", scroll, true);
 			view.removeEventListener("pointercancel", cancel);
+			view.removeEventListener("pointercancel", touchEnd);
 			view.removeEventListener("blur", cancel);
 			view.removeEventListener("resize", cancel);
 		},
